@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "soyenriquerocha": {
+      "source": { "source": "github", "repo": "Hainrixz/the-architect" }
+    }
+  },
+  "enabledPlugins": {
+    "the-architect@soyenriquerocha": true
+  }
+}
