@@ -34,7 +34,7 @@ Las etapas 1 y 2 (porcentajes, plazos y pruebas) dependen del proveedor, así qu
 - Pago 5 = logístico + IGV = 3,832.30. Pago 1 = 30% de 12,000. Pago 3 = 70%.
 
 ## Puntos a verificar (no asumir)
-1. La base del impuesto parece incluir TODO el monto logístico (flete, seguro y agenciamiento). La base legal es el valor CIF (FOB + flete + seguro). Hay que confirmarlo contra SUNAT.
+1. IGV compra: se agrupa como en el Excel (IGV+IPM sobre el valor CIF, más IGV sobre los gastos locales afectos). La suma coincide con 18% x (FOB + monto logístico) solo si todo el monto logístico está afecto. En el Excel, FOB charges (USD 857.14) no pagan IGV y no entran al CIF, así que la app debe calcular POR COMPONENTE, no con un 18% sobre el total.
 2. El PDF no indica la partida ni el ad valorem aplicado. Hay que mostrar ambos.
 3. El tipo de cambio varía entre tus archivos (3.40, 3.50, 3.70). Debe ser un dato único y visible.
 4. Redondeo: el total en soles difiere en un centavo (60,663.04 vs 60,663.05).
