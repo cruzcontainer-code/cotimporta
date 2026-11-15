@@ -329,7 +329,7 @@
       "docs/verified/tariff-source.md",
       "tests/unit/verified-docs.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T6",
