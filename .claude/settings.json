@@ -6,5 +6,83 @@
   },
   "enabledPlugins": {
     "the-architect@soyenriquerocha": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install --frozen-lockfile)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm format)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm test:e2e)",
+      "Bash(pnpm test:e2e:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm db:up)",
+      "Bash(pnpm db:down)",
+      "Bash(pnpm db:reset)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm db:migrate)",
+      "Bash(pnpm db:seed)",
+      "Bash(pnpm exec playwright install chromium)",
+      "Bash(bash scripts/serve-check.sh:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add -A)",
+      "Bash(git commit -m:*)",
+      "Bash(git tag:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git config:*)",
+      "Bash(git init -b main)",
+      "Bash(git commit -q -m:*)",
+      "Bash(rsync -a --ignore-existing blueprints/cotimporta/workspace/ ./)",
+      "Bash(cp -Rn blueprints/cotimporta/workspace/. ./)",
+      "Bash(cp blueprints/cotimporta/workspace/.claude/settings.json .claude/settings.json)",
+      "Bash(cp blueprints/cotimporta/workspace/CLAUDE.md CLAUDE.md)",
+      "Bash(cp .env.example .env)",
+      "Bash(chmod +x scripts/serve-check.sh)",
+      "Bash(corepack enable --install-directory:*)",
+      "Bash(corepack prepare pnpm@12.18.0 --activate)",
+      "Bash(pnpm install --no-frozen-lockfile)",
+      "Bash(pnpm approve-builds --all)",
+      "Bash(pnpm exec biome check --write .)",
+      "Bash(pnpm add -D -E typescript@6.0.3)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:secure.micuentaweb.pe)",
+      "WebFetch(domain:developers.izipay.pe)",
+      "WebFetch(domain:www.sunat.gob.pe)",
+      "WebFetch(domain:www.aduanet.gob.pe)",
+      "WebFetch(domain:www.gob.pe)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./.env.production.local)",
+      "Bash(git push:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard origin:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${CLAUDE_ENV_FILE:-}\" ]; then echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> \"$CLAUDE_ENV_FILE\"; fi; true"
+          }
+        ]
+      }
+    ]
   }
 }
