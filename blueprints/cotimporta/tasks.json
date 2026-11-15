@@ -244,7 +244,7 @@
       "src/components/quotes/quote-wizard.tsx",
       "tests/integration/quotes-calc.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T3",
