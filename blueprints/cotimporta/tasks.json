@@ -93,7 +93,7 @@
       "src/server/rate-limit.ts",
       "tests/integration/auth.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T4",
