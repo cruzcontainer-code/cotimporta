@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { getEnv, requireEnv } from "@/lib/env";
+import type { Actor } from "@/server/authz";
 import { getEmailProvider } from "@/server/email";
+import { AppError } from "@/server/errors";
 
 const DAY = 60 * 60 * 24;
 
@@ -112,8 +114,7 @@ export const auth = betterAuth({
 export type Role = "user" | "admin";
 export type SessionUser = { id: string; email: string; name: string; role: Role };
 
-// Actor mínimo para servicios; src/server/authz.ts (E1-T5) lo adopta como contrato.
-export type Actor = { userId: string; email: string; role: Role };
+export type { Actor };
 
 /** Usuario de la sesión actual, o null. */
 export async function getSessionUser(requestHeaders?: Headers): Promise<SessionUser | null> {
@@ -139,7 +140,7 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireActor(requestHeaders?: Headers): Promise<Actor> {
   const user = await getSessionUser(requestHeaders);
   if (!user) {
-    throw Object.assign(new Error("Debes iniciar sesión"), { code: "UNAUTHENTICATED" as const });
+    throw new AppError("UNAUTHENTICATED", "Debes iniciar sesión");
   }
-  return { userId: user.id, email: user.email, role: user.role };
+  return { userId: user.id, role: user.role };
 }

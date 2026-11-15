@@ -152,7 +152,7 @@
       "src/server/quotes/service.ts",
       "tests/integration/guard.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T6",
