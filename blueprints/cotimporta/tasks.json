@@ -303,7 +303,7 @@
       "src/app/(admin)/admin/settings/page.tsx",
       "tests/integration/admin.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T5",
