@@ -10,6 +10,22 @@ import { getEmailProvider } from "@/server/email";
 
 const DAY = 60 * 60 * 24;
 
+/** Perfil inicial del registro: moneda PEN si el país es PE, si no USD. Idempotente. */
+export async function createProfile(
+  userId: string,
+  input: { locale: "es" | "en"; country: string },
+): Promise<void> {
+  await db
+    .insert(schema.profiles)
+    .values({
+      userId,
+      locale: input.locale,
+      country: input.country,
+      currency: input.country === "PE" ? "PEN" : "USD",
+    })
+    .onConflictDoNothing();
+}
+
 function adminEmails(): Set<string> {
   return new Set(
     (getEnv().ADMIN_EMAILS ?? "")

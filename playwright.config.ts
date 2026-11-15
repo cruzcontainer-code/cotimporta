@@ -17,7 +17,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `pnpm build && ./node_modules/.bin/next start --port ${e2ePort}`,
+    // `pnpm exec` en vez de ./node_modules/.bin/next: cmd.exe (Windows) no ejecuta rutas "./".
+    command: `pnpm build && pnpm exec next start --port ${e2ePort}`,
     url: `${e2eBaseUrl}/`,
     reuseExistingServer: false,
     timeout: 300_000,
