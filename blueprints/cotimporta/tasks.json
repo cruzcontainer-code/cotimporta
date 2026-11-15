@@ -213,7 +213,7 @@
       "tests/unit/engine/golden.test.ts",
       "tests/unit/engine/rules.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T2",
