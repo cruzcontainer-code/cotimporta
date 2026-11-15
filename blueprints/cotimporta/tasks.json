@@ -273,7 +273,7 @@
       "src/app/(app)/app/quotes/actions.ts",
       "tests/e2e/quotes.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T4",

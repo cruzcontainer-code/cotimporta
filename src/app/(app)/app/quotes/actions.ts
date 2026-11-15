@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isLocale } from "@/i18n/messages";
 import { requireActor } from "@/lib/auth";
 import type { Actor } from "@/server/authz";
 import { AppError, type Result, toResult } from "@/server/errors";
@@ -10,6 +13,7 @@ import {
   calculateQuote,
   confirmHeading,
   costLinesSchema,
+  createQuote,
   type FxInput,
   fxSchema,
   type ItemInput,
@@ -22,6 +26,7 @@ import {
   saveItems,
   saveSupplierTerms,
   searchTariffHeadings,
+  softDeleteQuote,
   supplierTermsSchema,
   updateProduct,
 } from "@/server/quotes/service";
@@ -101,4 +106,32 @@ export async function suggestHeadingsAction(
   _quoteId: string,
 ): Promise<Result<{ code: string; descriptionEs: string; descriptionEn: string }[]>> {
   return { ok: false, error: { code: "UPSTREAM_UNAVAILABLE", message: "IA no disponible" } };
+}
+
+/** Crea una cotización y abre el asistente; sin cuota vuelve al listado con el aviso. */
+export async function createQuoteAction(): Promise<void> {
+  const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const locale = isLocale(cookieLocale) ? cookieLocale : "es";
+  const result = await toResult(async () =>
+    createQuote(await requireActor(), {
+      title: locale === "es" ? "Nueva cotización" : "New quote",
+      locale,
+    }),
+  );
+  // redirect() fuera de toResult: lanza una excepción interna que toResult atraparía.
+  if (!result.ok) {
+    redirect(`/app/quotes?error=${result.error.code === "QUOTA_EXCEEDED" ? "quota" : "create"}`);
+  }
+  revalidatePath("/app/quotes");
+  redirect(`/app/quotes/${result.data.id}?paso=producto`);
+}
+
+/** Borrado lógico confirmado en un <dialog>; recibe el id desde el formulario. */
+export async function deleteQuoteAction(formData: FormData): Promise<Result<null>> {
+  return toResult(async () => {
+    const id = valid(quoteIdSchema, formData.get("quoteId"));
+    await softDeleteQuote(await requireActor(), id);
+    revalidatePath("/app/quotes");
+    return null;
+  });
 }

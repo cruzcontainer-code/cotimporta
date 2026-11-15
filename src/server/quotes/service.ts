@@ -600,3 +600,27 @@ export async function getQuoteView(actor: Actor, quoteId: string): Promise<Quote
 export async function searchTariffHeadings(query: string) {
   return searchHeadings(db, query, todayUtc());
 }
+
+export type ComparedQuote = Pick<QuoteRow, "id" | "referenceCode" | "title" | "status"> & {
+  result: EngineResult | null;
+};
+
+/** Compara 2–3 cotizaciones propias (cualquiera ajena → NOT_FOUND). */
+export async function compareQuotes(actor: Actor, ids: string[]): Promise<ComparedQuote[]> {
+  const unique = [...new Set(ids)];
+  if (unique.length < 2 || unique.length > 3) {
+    throw new AppError("VALIDATION", "Elige entre 2 y 3 cotizaciones para comparar");
+  }
+  const rows = [];
+  for (const id of unique) {
+    const quote = await ownedQuoteOrThrow(db, actor, id);
+    rows.push({
+      id: quote.id,
+      referenceCode: quote.referenceCode,
+      title: quote.title,
+      status: quote.status,
+      result: (quote.result as EngineResult | null) ?? null,
+    });
+  }
+  return rows;
+}
