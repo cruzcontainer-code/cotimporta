@@ -183,7 +183,7 @@
       "src/db/seed-data.ts",
       "tests/integration/rules.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T1",
