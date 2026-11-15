@@ -1,0 +1,7 @@
+# Solo ajustes de pnpm para un proyecto único (sin "packages": no hay monorepo, nada que recorrer).
+# pnpm 12 aborta la instalación ante scripts de build no revisados (ERR_PNPM_IGNORED_BUILDS).
+# esbuild (dependencia de drizzle-kit) necesita su postinstall; sharp y unrs-resolver no.
+allowBuilds:
+  esbuild: true
+  sharp: false
+  unrs-resolver: false

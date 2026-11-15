@@ -1,0 +1,553 @@
+[
+  {
+    "id": "E1-T1",
+    "title": "Scaffold ejecutable: landing con tokens, tema y locale",
+    "epic": "01-fundacion",
+    "dependencies": [],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN se ejecuta `pnpm build` sobre el árbol recién preparado por el Bootstrap THE SYSTEM SHALL terminar con código 0.",
+      "WHEN `bash scripts/serve-check.sh / 200 Cotimporta` arranca el build de producción THE SYSTEM SHALL responder 200 en `/` con un cuerpo que contiene `Cotimporta`.",
+      "WHEN se pide `/` con la cookie `theme=dark` THE SYSTEM SHALL devolver HTML de servidor cuyo elemento `<html>` ya trae `class=\"dark\"`.",
+      "WHEN se pide `/` con la cookie `NEXT_LOCALE=en` THE SYSTEM SHALL devolver HTML con `lang=\"en\"`, y sin cookie ni `Accept-Language` en inglés SHALL devolver `lang=\"es\"`.",
+      "WHEN se ejecutan `pnpm typecheck`, `pnpm lint` y `pnpm test --passWithNoTests` THE SYSTEM SHALL terminar con código 0 en los tres."
+    ],
+    "verify": [
+      "pnpm install --frozen-lockfile",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm test --passWithNoTests",
+      "pnpm build",
+      "bash scripts/serve-check.sh / 200 'Cotimporta'",
+      "bash scripts/serve-check.sh / 200 'class=\"dark\"' 'theme=dark'",
+      "bash scripts/serve-check.sh / 200 'lang=\"en\"' 'NEXT_LOCALE=en'",
+      "bash scripts/serve-check.sh / 200 'lang=\"es\"'"
+    ],
+    "checkpoint": "step-01-scaffold",
+    "files": [
+      "src/app/layout.tsx",
+      "src/app/page.tsx",
+      "src/app/globals.css",
+      "src/i18n/request.ts",
+      "src/i18n/messages.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T2",
+    "title": "Base de datos: esquema, migración inicial y entorno",
+    "epic": "01-fundacion",
+    "dependencies": ["E1-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN se ejecuta `pnpm db:migrate` contra la base local vacía THE SYSTEM SHALL terminar con código 0.",
+      "WHEN se ejecuta `pnpm test tests/integration/db.test.ts` THE SYSTEM SHALL encontrar en la base de pruebas, vía `to_regclass`, cada tabla exportada por `src/db/schema.ts` y terminar con código 0.",
+      "WHEN `pnpm db:generate` se ejecuta otra vez sin cambios de esquema THE SYSTEM SHALL no crear ningún archivo nuevo en `drizzle/`.",
+      "WHEN `parseEnv` recibe un entorno sin `DATABASE_URL` THE SYSTEM SHALL lanzar un error cuyo mensaje nombra `DATABASE_URL`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm db:migrate",
+      "pnpm test tests/integration/db.test.ts",
+      "n=$(ls drizzle/*.sql | wc -l); pnpm db:generate; test \"$(ls drizzle/*.sql | wc -l)\" -eq \"$n\"",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build",
+      "bash scripts/serve-check.sh / 200 'Cotimporta'"
+    ],
+    "checkpoint": "step-02-database",
+    "files": [
+      "src/db/schema.ts",
+      "src/db/client.ts",
+      "src/lib/env.ts",
+      "drizzle/**",
+      "tests/integration/db.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T3",
+    "title": "Auth servidor: email verificado, roles y límites",
+    "epic": "01-fundacion",
+    "dependencies": ["E1-T2"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN una cuenta nueva se registra con email y contraseña THE SYSTEM SHALL guardar el usuario con `email_verified=false` y escribir exactamente un correo de verificación en el outbox.",
+      "WHEN esa cuenta sin verificar intenta ingresar THE SYSTEM SHALL rechazar el ingreso y no crear ninguna fila en `sessions`.",
+      "WHEN se sigue el enlace de verificación del outbox THE SYSTEM SHALL marcar `email_verified=true` y el siguiente ingreso SHALL tener éxito.",
+      "WHEN una cuenta se registra con un email listado en `ADMIN_EMAILS` THE SYSTEM SHALL guardar `role='admin'`, y cualquier otra cuenta SHALL quedar con `role='user'`.",
+      "WHEN la misma clave de rate limit recibe 11 golpes dentro de una ventana de 60 segundos con límite 10 THE SYSTEM SHALL permitir los 10 primeros y rechazar el 11.º."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/auth.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-03-auth-server",
+    "files": [
+      "src/lib/auth.ts",
+      "src/app/api/auth/[...all]/route.ts",
+      "src/server/email.ts",
+      "src/server/rate-limit.ts",
+      "tests/integration/auth.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T4",
+    "title": "UI de acceso y shell protegido de la app",
+    "epic": "01-fundacion",
+    "dependencies": ["E1-T3"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN un visitante anónimo pide `/app` THE SYSTEM SHALL redirigir a `/auth/sign-in`.",
+      "WHEN un visitante se registra en `/auth/sign-up`, sigue el enlace de verificación del outbox e ingresa THE SYSTEM SHALL mostrar `/app` con el encabezado `Panel`.",
+      "WHEN `/` y `/auth/sign-in` se renderizan a 375 px y a 1440 px de ancho THE SYSTEM SHALL reportar `document.documentElement.scrollWidth` igual a `clientWidth`.",
+      "WHEN un usuario con sesión pulsa `Salir` THE SYSTEM SHALL cerrar la sesión y la siguiente petición a `/app` SHALL redirigir a `/auth/sign-in`.",
+      "WHEN se envía una contraseña incorrecta en `/auth/sign-in` THE SYSTEM SHALL mostrar el error como texto dentro de un elemento con `role=\"alert\"` y permanecer en la página."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test:e2e tests/e2e/auth-shell.spec.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-04-auth-ui",
+    "files": [
+      "src/app/(auth)/auth/[mode]/page.tsx",
+      "src/components/auth/auth-form.tsx",
+      "src/app/(app)/app/layout.tsx",
+      "src/app/(app)/app/page.tsx",
+      "tests/e2e/auth-shell.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T5",
+    "title": "Guardia única, errores tipados, cuotas y aislamiento",
+    "epic": "01-fundacion",
+    "dependencies": ["E1-T3"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN el usuario A pide leer, renombrar o borrar una cotización cuyo dueño es el usuario B THE SYSTEM SHALL lanzar `NOT_FOUND` (HTTP 404) en los tres casos y dejar intacta la fila de B.",
+      "WHEN el usuario A lista sus cotizaciones THE SYSTEM SHALL devolver solo filas con `user_id` igual a A y `deleted_at` nulo.",
+      "WHEN una cuenta verificada sin suscripción crea su primera cotización THE SYSTEM SHALL crearla con un código que cumple `^COT-\\d{4}-\\d{4}$`, y el segundo intento SHALL lanzar `QUOTA_EXCEEDED` (HTTP 402) sin crear fila.",
+      "WHEN una cuenta con suscripción `active` ya usó en el periodo actual la cuota de su plan THE SYSTEM SHALL rechazar la siguiente creación con `QUOTA_EXCEEDED`.",
+      "WHEN dos creaciones concurrentes de la misma cuenta compiten por la última cotización disponible THE SYSTEM SHALL crear exactamente una.",
+      "WHEN se registra un log con un campo llamado `password` o `token` THE SYSTEM SHALL escribir su valor como `[REDACTED]`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/guard.test.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-05-isolation",
+    "files": [
+      "src/server/authz.ts",
+      "src/server/errors.ts",
+      "src/server/billing/entitlements.ts",
+      "src/server/quotes/service.ts",
+      "tests/integration/guard.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T6",
+    "title": "Reglas: repositorio con vigencias y seed demo",
+    "epic": "01-fundacion",
+    "dependencies": ["E1-T2"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `pnpm db:seed` se ejecuta dos veces sobre la base de desarrollo migrada THE SYSTEM SHALL terminar con código 0 ambas veces.",
+      "WHEN la función `seed` se ejecuta dos veces sobre la base de pruebas THE SYSTEM SHALL dejar los mismos conteos de filas por tabla tras la segunda ejecución que tras la primera.",
+      "WHEN se resuelven las reglas de la partida `8477300000` para el 2026-06-01 THE SYSTEM SHALL devolver las filas de IGV e IPM vigentes ese día y ninguna fila con `effective_to` anterior a esa fecha.",
+      "WHEN se pide una partida que no existe en `tariff_headings` THE SYSTEM SHALL lanzar `NOT_FOUND`.",
+      "WHEN `resolveRules` devuelve reglas THE SYSTEM SHALL incluir por cada una su tabla, `id`, `effective_from` y `source_url` para el snapshot."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm db:migrate",
+      "pnpm db:seed",
+      "pnpm db:seed",
+      "pnpm test tests/integration/rules.test.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-06-rules-data",
+    "files": [
+      "src/server/rules/repository.ts",
+      "src/db/seed.ts",
+      "src/db/seed-data.ts",
+      "tests/integration/rules.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T1",
+    "title": "Motor de cálculo puro con pruebas golden",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E1-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `calculateQuote` procesa la entrada golden BG-880 THE SYSTEM SHALL devolver en centavos de USD FOB 1200000, logístico 141720, tributos de compra 241510, gestión 150000 y total 1733230.",
+      "WHEN se lee ese mismo resultado golden THE SYSTEM SHALL devolver las etapas 1, 3, 5 y 6 iguales a 360000, 840000, 383230 y 150000, y un total en PEN de 6066305 con `penPerUsdE4=35000`.",
+      "WHEN la entrada golden recibe la línea internacional `Gastos FOB en origen` de 85714 con `inCif=false` e `igvApplicable=false` THE SYSTEM SHALL mantener los tributos de compra en 241510, cobrar 0 de IGV en esa línea y devolver un total de 1818944.",
+      "WHEN el país de origen tiene un acuerdo que exonera `ad_valorem` y el usuario declara certificado de origen THE SYSTEM SHALL fijar el ad valorem en 0 con el id de la regla del acuerdo en su explicación, y sin certificado SHALL cobrar 77640 con una tasa de 600 bps.",
+      "WHEN se calcula cualquier entrada válida de las pruebas THE SYSTEM SHALL devolver etapas cuya suma es igual al total y solo montos enteros.",
+      "WHEN `grep` busca en `src/lib/engine` importaciones de `@/server`, `@/db`, `node:` o llamadas a `fetch(` THE SYSTEM SHALL no encontrar ninguna."
+    ],
+    "verify": [
+      "pnpm test tests/unit/engine",
+      "status=0; grep -rnE 'from \"@/(server|db)|from \"node:|fetch\\(' src/lib/engine || status=$?; test \"$status\" -eq 1",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-07-engine",
+    "files": [
+      "src/lib/engine/types.ts",
+      "src/lib/engine/money.ts",
+      "src/lib/engine/calculate.ts",
+      "tests/unit/engine/golden.test.ts",
+      "tests/unit/engine/rules.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T2",
+    "title": "Cotizador: producto, partida, costos y cálculo",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E1-T4", "E1-T5", "E1-T6", "E2-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN se calcula una cotización con las reglas demo sembradas THE SYSTEM SHALL persistir `result`, una fila de `quote_stages` por cada etapa 1–6 y una fila de `quote_tax_breakdown` por cada componente tributario, todas del dueño de la cotización.",
+      "WHEN se relee una cotización calculada THE SYSTEM SHALL devolver un snapshot de reglas con tabla, `id`, `effective_from` y `source_url` de cada regla usada.",
+      "WHEN se guarda una línea de costo con `inCif=true` y `origin='local'` THE SYSTEM SHALL devolver `VALIDATION` (HTTP 422) y no guardar nada.",
+      "WHEN se guardan términos del proveedor cuyo adelanto y saldo no suman 10000 bps THE SYSTEM SHALL devolver `VALIDATION`.",
+      "WHEN se confirma una partida ausente de `tariff_headings` THE SYSTEM SHALL devolver `VALIDATION` y conservar la partida anterior.",
+      "WHEN se calcula sin tipo de cambio THE SYSTEM SHALL devolver `VALIDATION` con un mensaje que nombra `fx`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/quotes-calc.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-08-quote-wizard",
+    "files": [
+      "src/server/quotes/service.ts",
+      "src/app/(app)/app/quotes/actions.ts",
+      "src/app/(app)/app/quotes/[id]/page.tsx",
+      "src/components/quotes/quote-wizard.tsx",
+      "tests/integration/quotes-calc.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T3",
+    "title": "Listado, comparación y borrado lógico",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E2-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN una cuenta nueva verificada abre `/app/quotes` THE SYSTEM SHALL mostrar el texto `Aún no tienes cotizaciones` y un botón `Nueva cotización`.",
+      "WHEN esa cuenta crea una cotización, ingresa un ítem de factura de 12000.00 USD, confirma la partida `8477300000`, fija el tipo de cambio 3.50 y calcula THE SYSTEM SHALL mostrar el resultado con el total en USD y en PEN.",
+      "WHEN la cuenta vuelve a `/app/quotes` THE SYSTEM SHALL listar esa cotización con su código `COT-`.",
+      "WHEN la cuenta borra la cotización THE SYSTEM SHALL quitarla del listado y conservar la fila con `deleted_at` informado.",
+      "WHEN se abren dos cotizaciones propias en `/app/quotes/compare?ids=<a>,<b>` THE SYSTEM SHALL mostrar una columna por cotización con total, factor y tributos de compra."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test:e2e tests/e2e/quotes.spec.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-09-quote-list",
+    "files": [
+      "src/server/quotes/service.ts",
+      "src/app/(app)/app/quotes/page.tsx",
+      "src/app/(app)/app/quotes/compare/page.tsx",
+      "src/app/(app)/app/quotes/actions.ts",
+      "tests/e2e/quotes.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T4",
+    "title": "Panel admin: gastos locales, tasas y plan",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E1-T5", "E1-T6"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `requireAdmin` se ejecuta para un actor con `role='user'` THE SYSTEM SHALL lanzar `NOT_FOUND`.",
+      "WHEN un admin guarda un gasto local con un `valid_from` nuevo THE SYSTEM SHALL insertar una fila nueva, conservar la anterior, y `currentLocalCharges` en esa fecha SHALL devolver el monto nuevo.",
+      "WHEN un admin guarda una tasa tributaria THE SYSTEM SHALL exigir `source_url` y `effective_from`, cerrar el `effective_to` de la fila anterior en el nuevo `effective_from` y fijar `reviewed_by` con el id del admin.",
+      "WHEN un admin edita el precio o la cuota del plan THE SYSTEM SHALL persistir el cambio y escribir una fila en `audit_events` con el admin como actor.",
+      "WHEN un admin marca una tasa como verificada THE SYSTEM SHALL guardar `verification_status='verified'` solo si `source_url` empieza con `https://`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/admin.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-10-admin",
+    "files": [
+      "src/server/admin/service.ts",
+      "src/app/(admin)/admin/layout.tsx",
+      "src/app/(admin)/admin/charges/page.tsx",
+      "src/app/(admin)/admin/settings/page.tsx",
+      "tests/integration/admin.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T5",
+    "title": "Compuerta de hechos externos: Gemini, Izipay, arancel",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E1-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN se ejecuta `pnpm test tests/unit/verified-docs.test.ts` THE SYSTEM SHALL encontrar los tres archivos de `docs/verified/` con las claves de front matter `topic`, `status`, `checked_on` (fecha ISO) y `source_url` (URL https) y terminar con código 0.",
+      "WHEN `docs/verified/gemini-model.md` tiene `status: verified` THE SYSTEM SHALL exigir un `model_id` no vacío junto con `supports_pdf_input: yes` y `supports_json_schema: yes`.",
+      "WHEN `docs/verified/izipay.md` tiene `status: verified` THE SYSTEM SHALL exigir `recurring_supported`, `usd_supported`, `ipn_signature` y `mode`, con `mode` igual a `recurring` o `manual_renewal`.",
+      "WHEN `docs/verified/tariff-source.md` tiene `status: verified` THE SYSTEM SHALL exigir `machine_readable` y `format`.",
+      "WHEN alguno de los tres archivos no tiene `status: verified` THE SYSTEM SHALL fallar la prueba salvo que tenga `status: deferred` con un `next_action` no vacío y `owner_ack` con la fecha ISO en que el dueño aceptó el aplazamiento."
+    ],
+    "verify": [
+      "pnpm test tests/unit/verified-docs.test.ts",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-11-external-facts",
+    "files": [
+      "docs/verified/gemini-model.md",
+      "docs/verified/izipay.md",
+      "docs/verified/tariff-source.md",
+      "tests/unit/verified-docs.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T6",
+    "title": "Importación de reglas: staging, diff, CSV y cron",
+    "epic": "02-motor-y-cotizador",
+    "dependencies": ["E2-T4", "E2-T5"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN se pone en staging un CSV con cabecera `heading_code,description_es,description_en,kind,base,rate_bps,amount_per_unit_minor,unit,in_igv_base,effective_from,source_url` que trae una partida nueva y una tasa cambiada THE SYSTEM SHALL crear una fila en `rule_import_runs` con estado `staged`, filas de staging marcadas `added` y `changed`, y no modificar `tariff_headings` ni `tariff_rates`.",
+      "WHEN un admin publica esa corrida THE SYSTEM SHALL copiar las filas de staging a las tablas publicadas con `reviewed_by` igual al id del admin y marcar la corrida como `published`.",
+      "WHEN una fila del CSV trae un código de partida mal formado o una tasa negativa THE SYSTEM SHALL marcar la corrida `failed` con el número de línea en `error` y no poner nada en staging.",
+      "WHEN se llama `GET /api/cron/rules-import` sin `Authorization: Bearer <CRON_SECRET>` THE SYSTEM SHALL responder 401 y no crear ninguna corrida.",
+      "WHEN el adaptador oficial reporta la fuente no disponible THE SYSTEM SHALL marcar la corrida `failed`, registrar un log de nivel `error` y llamar una vez al reporte de errores.",
+      "WHEN se lee `vercel.json` THE SYSTEM SHALL contener un cron con `path` igual a `/api/cron/rules-import`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/rules-import.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-12-rules-import",
+    "files": [
+      "src/server/rules/import.ts",
+      "src/app/api/cron/rules-import/route.ts",
+      "src/app/(admin)/admin/rules/page.tsx",
+      "vercel.json",
+      "tests/integration/rules-import.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T1",
+    "title": "Almacenamiento privado, subida de PDF y fotos",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E2-T2"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN el dueño sube a su cotización un PDF de menos de 20 MB THE SYSTEM SHALL guardarlo bajo `users/<userId>/quotes/<quoteId>/uploads/`, insertar una fila en `supplier_documents` con su SHA-256 y responder 201.",
+      "WHEN se sube un PDF generado en la prueba con una imagen PNG incrustada de 4×4 THE SYSTEM SHALL insertar al menos una fila en `document_images` con ancho 4 y alto 4 y un PNG guardado cuyos primeros bytes son la firma PNG.",
+      "WHEN se sube un archivo cuyos primeros bytes no son `%PDF-` o que pesa más de 20 MB THE SYSTEM SHALL responder 422 y no guardar nada.",
+      "WHEN el usuario A sube a la cotización del usuario B o pide una imagen de ella THE SYSTEM SHALL responder 404.",
+      "WHEN el usuario excluye o reordena imágenes THE SYSTEM SHALL persistir `included` y `position`, y las lecturas siguientes SHALL devolver las imágenes ordenadas por `position`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/documents.test.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-13-documents",
+    "files": [
+      "src/server/storage/index.ts",
+      "src/server/documents/service.ts",
+      "src/app/api/v1/quotes/[id]/documents/route.ts",
+      "tests/helpers/session.ts",
+      "tests/integration/documents.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T2",
+    "title": "IA: gateway, extracción de ficha y revisión",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E2-T5", "E3-T1"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN el driver falso devuelve una extracción válida para un documento subido THE SYSTEM SHALL guardarla en `supplier_documents.extracted_specs` con `extraction_status='done'` y escribir una fila en `ai_calls` con `status='ok'`.",
+      "WHEN el driver devuelve dos veces una salida que no cumple el esquema Zod THE SYSTEM SHALL fijar `extraction_status='failed'`, conservar el archivo original y devolver `UPSTREAM_UNAVAILABLE` para que el usuario ingrese la ficha a mano.",
+      "WHEN el driver excede el tiempo límite THE SYSTEM SHALL reintentar como máximo 2 veces y luego devolver `UPSTREAM_UNAVAILABLE`.",
+      "WHEN un usuario supera 20 llamadas de IA en una hora THE SYSTEM SHALL devolver `RATE_LIMITED` antes de llamar al driver y no registrar fila en `ai_calls` para la llamada rechazada.",
+      "WHEN `grep` lista los archivos de `src` que importan `@google/genai` THE SYSTEM SHALL encontrar exactamente `src/server/ai/gateway.ts`, y `docs/verified/gemini-model.md` SHALL tener la línea `status: verified`.",
+      "WHEN se arma el prompt de extracción THE SYSTEM SHALL no incluir el email, el nombre ni el id de la cuenta."
+    ],
+    "verify": [
+      "grep -qx 'status: verified' docs/verified/gemini-model.md",
+      "pnpm db:up",
+      "pnpm test tests/integration/ai-extract.test.ts",
+      "test \"$(grep -rl '@google/genai' src)\" = \"src/server/ai/gateway.ts\"",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-14-ai-extraction",
+    "files": [
+      "src/server/ai/gateway.ts",
+      "src/server/ai/extract-specs.ts",
+      "src/components/quotes/document-step.tsx",
+      "src/app/(app)/app/quotes/[id]/page.tsx",
+      "tests/integration/ai-extract.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T3",
+    "title": "IA: partida validada y narrativa",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E3-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN el driver falso sugiere tres partidas y una no existe en `tariff_headings` THE SYSTEM SHALL devolver solo las dos publicadas, cada una con justificación y confianza entre 0 y 1.",
+      "WHEN ninguna partida sugerida existe en `tariff_headings` THE SYSTEM SHALL devolver una lista vacía con el motivo `NO_VALID_CANDIDATES`.",
+      "WHEN se devuelve una sugerencia THE SYSTEM SHALL no cambiar `quotes.tariff_heading_code` hasta que el usuario confirme una.",
+      "WHEN la salida de la narrativa trae claves distintas de los ids de concepto y de etapa esperados THE SYSTEM SHALL rechazarla con el esquema Zod y dejar `quotes.narrative` sin cambios.",
+      "WHEN el driver falla al generar la narrativa THE SYSTEM SHALL dejar `quotes.narrative` en nulo y el `result` del cálculo sin cambios."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/ai-heading.test.ts",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-15-ai-heading-narrative",
+    "files": [
+      "src/server/ai/suggest-heading.ts",
+      "src/server/ai/narrative.ts",
+      "src/app/(app)/app/quotes/actions.ts",
+      "tests/integration/ai-heading.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T4",
+    "title": "PDF formal de la cotización y descarga",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E3-T1", "E3-T3"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN se genera el PDF de la cotización golden BG-880 THE SYSTEM SHALL producir bytes que empiezan con `%PDF-` y cuyo texto, extraído con pdfjs-dist y sin espacios, contiene `17,332.30`, `60,663.05` y el código `COT-` de la cotización.",
+      "WHEN el PDF se genera con locale `en` THE SYSTEM SHALL contener `INVESTMENTPROPOSAL`, y con locale `es` SHALL contener `PROPUESTADEINVERSIÓN`, ambos en el texto sin espacios.",
+      "WHEN se genera el PDF THE SYSTEM SHALL contener `Estimaciónreferencial` en el texto sin espacios del locale `es` y la fecha ISO `rules_as_of` del snapshot de reglas.",
+      "WHEN el dueño pide `GET /api/v1/quotes/<id>/pdf?locale=es` THE SYSTEM SHALL responder 200 con `content-type: application/pdf` y guardar una fila en `generated_documents` con versión 1, y un segundo pedido tras recalcular SHALL guardar la versión 2.",
+      "WHEN otro usuario pide esa URL THE SYSTEM SHALL responder 404.",
+      "WHEN no existe `public/brand/logo.png` THE SYSTEM SHALL dibujar en la cabecera del PDF la marca de texto `Cotimporta`."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm test tests/integration/quote-pdf.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-16-quote-pdf",
+    "files": [
+      "src/server/pdf/quote-document.ts",
+      "src/server/pdf/render.ts",
+      "src/app/api/v1/quotes/[id]/pdf/route.ts",
+      "src/app/(app)/app/quotes/[id]/page.tsx",
+      "tests/integration/quote-pdf.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T5",
+    "title": "Cobros: PaymentProvider, webhooks y plan",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E1-T5", "E2-T5"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN llega un evento falso `payment.succeeded` con firma correcta THE SYSTEM SHALL insertar una fila en `payment_events` y dejar la suscripción de la cuenta en `active` con `current_period_end` un mes después de la fecha de pago.",
+      "WHEN el mismo id de evento llega otra vez THE SYSTEM SHALL responder 200 y no cambiar los conteos de filas de `payment_events` ni de `subscriptions`.",
+      "WHEN llega un evento con firma incorrecta THE SYSTEM SHALL responder 400 y no escribir ninguna fila.",
+      "WHEN un perfil con país `PE` inicia el checkout THE SYSTEM SHALL pedir el cobro al proveedor en `PEN`, cualquier otro país SHALL usar `USD`, y `docs/verified/izipay.md` SHALL tener la línea `status: verified`.",
+      "WHEN el plan está inactivo o tiene precio 0 THE SYSTEM SHALL rechazar el checkout con `CONFLICT`.",
+      "WHEN una suscripción pasa a `active` en un periodo nuevo THE SYSTEM SHALL iniciar un contador de uso de ese periodo con `quotes_used=0`."
+    ],
+    "verify": [
+      "grep -qx 'status: verified' docs/verified/izipay.md",
+      "pnpm db:up",
+      "pnpm test tests/integration/billing.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "checkpoint": "step-17-billing",
+    "files": [
+      "src/server/billing/provider.ts",
+      "src/server/billing/service.ts",
+      "src/app/api/webhooks/payments/[provider]/route.ts",
+      "src/app/(app)/app/billing/page.tsx",
+      "tests/integration/billing.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T6",
+    "title": "Cuenta (exportar/borrar) y health de producción",
+    "epic": "03-ia-pdf-cobros",
+    "dependencies": ["E3-T1", "E3-T4", "E3-T5"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN un usuario pide la exportación de datos THE SYSTEM SHALL devolver un JSON con el perfil, todas sus cotizaciones (incluidas las borradas lógicamente) con ítems, líneas de costo, etapas y desglose tributario, y la lista de archivos guardados, y registrar una fila en `data_export_requests`.",
+      "WHEN un usuario borra su cuenta THE SYSTEM SHALL eliminar todos los archivos bajo `users/<userId>/`, eliminar toda fila ligada a ese usuario sin dejar filas en `sessions`, y un ingreso posterior con las mismas credenciales SHALL fallar.",
+      "WHEN se borra la cuenta THE SYSTEM SHALL conservar las filas de `audit_events` y `payment_events` del usuario solo con `user_id` en nulo.",
+      "WHEN `bash scripts/serve-check.sh /api/health 200 '\"ok\":true'` corre con la base alcanzable y las migraciones aplicadas THE SYSTEM SHALL responder 200 con `\"ok\":true`.",
+      "WHEN `checkHealth` corre contra una base inalcanzable THE SYSTEM SHALL devolver estado 503 con `\"ok\":false`.",
+      "WHEN se ejecutan `pnpm test` y `pnpm test:e2e` completos THE SYSTEM SHALL terminar con código 0, 0 fallidas y 0 omitidas."
+    ],
+    "verify": [
+      "pnpm db:up",
+      "pnpm db:migrate",
+      "pnpm test tests/integration/account.test.ts",
+      "pnpm build",
+      "bash scripts/serve-check.sh /api/health 200 '\"ok\":true'",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm test",
+      "pnpm test:e2e"
+    ],
+    "checkpoint": "step-18-account-health",
+    "files": [
+      "src/server/account/service.ts",
+      "src/app/(app)/app/settings/page.tsx",
+      "src/app/api/v1/account/export/route.ts",
+      "src/app/api/health/route.ts",
+      "tests/integration/account.test.ts"
+    ],
+    "status": "pending"
+  }
+]

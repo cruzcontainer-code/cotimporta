@@ -1,0 +1,18 @@
+# Cotimporta — emitido por el blueprint (§10). Debe existir antes del primer commit del Bootstrap.
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+.data/
+.vercel/
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+.claude/settings.local.json
+
+# Secretos: nunca en el repo. La plantilla .env.example sí se versiona.
+.env
+.env.*
+!.env.example
