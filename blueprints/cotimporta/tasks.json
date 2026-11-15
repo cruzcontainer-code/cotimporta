@@ -360,7 +360,7 @@
       "vercel.json",
       "tests/integration/rules-import.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T1",
