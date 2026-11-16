@@ -389,7 +389,7 @@
       "tests/helpers/session.ts",
       "tests/integration/documents.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T2",
