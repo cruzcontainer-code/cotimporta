@@ -422,7 +422,7 @@
       "src/app/(app)/app/quotes/[id]/page.tsx",
       "tests/integration/ai-extract.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T3",

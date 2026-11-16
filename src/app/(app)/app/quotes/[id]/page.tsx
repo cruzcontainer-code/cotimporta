@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
+import { type DocumentActions, DocumentStep } from "@/components/quotes/document-step";
 import { QuoteResult } from "@/components/quotes/quote-result";
 import { QuoteWizard, type WizardStep } from "@/components/quotes/quote-wizard";
+import { EMPTY_SPECS, type Specs } from "@/components/quotes/specs-editor";
 import { type Copy, isLocale, type Locale } from "@/i18n/messages";
 import { requireActor } from "@/lib/auth";
-import { AppError } from "@/server/errors";
+import { extractSpecs, SpecsSchema, saveQuoteSpecs } from "@/server/ai/extract-specs";
+import { listDocuments, listImages, moveImage, setImageIncluded } from "@/server/documents/service";
+import { AppError, toResult } from "@/server/errors";
 import { getQuoteView } from "@/server/quotes/service";
 import * as quoteActions from "../actions";
 
-const STEPS = ["producto", "partida", "costos", "resultado"] as const;
+const STEPS = ["producto", "partida", "documento", "costos", "resultado"] as const;
 type Step = (typeof STEPS)[number];
 
 const actions = {
@@ -24,12 +28,43 @@ const actions = {
   calculate: quoteActions.calculateQuoteAction,
 };
 
+// Acciones del paso Documento (E3-T2): transporte delgado, el servicio valida y aplica la propiedad.
+async function extractAction(quoteId: string, documentId: string) {
+  "use server";
+  return toResult(async () => extractSpecs(await requireActor(), quoteId, documentId));
+}
+async function saveSpecsAction(quoteId: string, specs: Specs) {
+  "use server";
+  return toResult(async () => {
+    await saveQuoteSpecs(await requireActor(), quoteId, specs);
+  });
+}
+async function setIncludedAction(quoteId: string, imageId: string, included: boolean) {
+  "use server";
+  return toResult(async () =>
+    setImageIncluded(await requireActor(), quoteId, imageId, included === true),
+  );
+}
+async function moveImageAction(quoteId: string, imageId: string, toPosition: number) {
+  "use server";
+  return toResult(async () =>
+    moveImage(await requireActor(), quoteId, imageId, Number(toPosition)),
+  );
+}
+const documentActions: DocumentActions = {
+  extract: extractAction,
+  saveSpecs: saveSpecsAction,
+  setIncluded: setIncludedAction,
+  moveImage: moveImageAction,
+};
+
 const copy: Copy<{ nav: string; steps: Record<Step, string> }> = {
   es: {
     nav: "Pasos de la cotización",
     steps: {
       producto: "Producto",
       partida: "Partida",
+      documento: "Ficha técnica",
       costos: "Costos y términos",
       resultado: "Resultado",
     },
@@ -39,6 +74,7 @@ const copy: Copy<{ nav: string; steps: Record<Step, string> }> = {
     steps: {
       producto: "Product",
       partida: "Tariff heading",
+      documento: "Technical sheet",
       costos: "Costs and terms",
       resultado: "Result",
     },
@@ -85,7 +121,28 @@ export default async function QuotePage({ params, searchParams }: Props) {
           </Link>
         ))}
       </nav>
-      {step === "resultado" ? (
+      {step === "documento" ? (
+        <DocumentStep
+          quoteId={quote.id}
+          documents={(await listDocuments(actor, quote.id)).map(
+            ({ id: docId, originalFilename, extractionStatus }) => ({
+              id: docId,
+              originalFilename,
+              extractionStatus,
+            }),
+          )}
+          images={(await listImages(actor, quote.id)).map(
+            ({ id: imageId, width, height, included }) => ({
+              id: imageId,
+              width,
+              height,
+              included,
+            }),
+          )}
+          specs={SpecsSchema.safeParse(quote.specs).data ?? EMPTY_SPECS}
+          actions={documentActions}
+        />
+      ) : step === "resultado" ? (
         <QuoteResult
           result={view.result}
           rulesAsOf={quote.rulesAsOf}

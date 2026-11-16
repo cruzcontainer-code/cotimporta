@@ -345,3 +345,27 @@ export async function readImage(
   if (!bytes) throw new AppError("NOT_FOUND", "Imagen no encontrada");
   return bytes;
 }
+
+export type DocumentSummary = {
+  id: string;
+  originalFilename: string;
+  extractionStatus: "pending" | "done" | "failed" | "skipped";
+  extractedSpecs: unknown;
+  createdAt: Date;
+};
+
+/** Fichas subidas a la cotización, la más reciente primero. */
+export async function listDocuments(actor: Actor, quoteId: string): Promise<DocumentSummary[]> {
+  await ownedQuoteOrThrow(db, actor, quoteId);
+  const rows = await db
+    .select({
+      id: supplierDocuments.id,
+      originalFilename: supplierDocuments.originalFilename,
+      extractionStatus: supplierDocuments.extractionStatus,
+      extractedSpecs: supplierDocuments.extractedSpecs,
+      createdAt: supplierDocuments.createdAt,
+    })
+    .from(supplierDocuments)
+    .where(and(eq(supplierDocuments.quoteId, quoteId), eq(supplierDocuments.userId, actor.userId)));
+  return rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
