@@ -513,7 +513,7 @@
       "src/app/(app)/app/billing/page.tsx",
       "tests/integration/billing.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T6",
