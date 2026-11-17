@@ -21,9 +21,11 @@
     "db:reset": "docker compose down -v && docker compose up -d --wait db",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "node --env-file-if-exists=.env src/db/seed.ts"
+    "db:seed": "node --env-file-if-exists=.env src/db/seed.ts",
+    "db:load-official": "node --env-file-if-exists=.env src/db/load-official.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1155.0",
     "@google/genai": "3.3.0",
     "@react-pdf/renderer": "4.9.0",
     "better-auth": "1.7.22",
@@ -37,6 +39,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@biomejs/biome": "2.5.15",
     "@playwright/test": "1.65.0",
     "@tailwindcss/postcss": "4.3.5",

@@ -2,6 +2,8 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { getEnv, requireEnv } from "@/lib/env";
 import { AppError } from "@/server/errors";
+import { assertKey } from "./key";
+import { s3Provider } from "./s3";
 
 // Archivos privados. Claves: users/<userId>/quotes/<quoteId>/{uploads,images,generated}/…
 // Nunca se sirven directo: los route handlers leen bytes tras requireActor + propiedad.
@@ -14,22 +16,6 @@ export interface StorageProvider {
   deletePrefix(prefix: string): Promise<number>;
   /** Claves bajo `prefix`, ordenadas. */
   list(prefix: string): Promise<string[]>;
-}
-
-/** Clave válida: relativa, con "/" y sin segmentos "..", "." ni vacíos. */
-function assertKey(key: string): void {
-  const segments = key.split("/");
-  const unsafe =
-    key.length === 0 ||
-    key.length > 512 ||
-    isAbsolute(key) ||
-    /^[a-zA-Z]:/.test(key) ||
-    key.includes("\\") ||
-    key.includes("\0") ||
-    segments.some((segment) => segment === "" || segment === "." || segment === "..");
-  if (unsafe) {
-    throw new AppError("VALIDATION", "Clave de almacenamiento inválida");
-  }
 }
 
 function localProvider(root: string): StorageProvider {
@@ -95,6 +81,16 @@ export function getStorage(): StorageProvider {
     switch (driver) {
       case "local":
         instance = localProvider(requireEnv("STORAGE_LOCAL_DIR"));
+        break;
+      case "s3":
+        instance = s3Provider({
+          bucket: requireEnv("S3_BUCKET"),
+          region: getEnv().S3_REGION ?? "auto",
+          endpoint: getEnv().S3_ENDPOINT,
+          accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
+          secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+          forcePathStyle: getEnv().S3_FORCE_PATH_STYLE === "true",
+        });
         break;
     }
   }

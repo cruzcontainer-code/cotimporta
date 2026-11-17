@@ -30,7 +30,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <Link href="/" className="text-lg font-semibold tracking-tight">
                 {hasLogo ? (
                   // biome-ignore lint/performance/noImgElement: logo SVG reemplazable por el dueño
-                  <img src="/brand/logo.svg" alt="Cotimporta" className="h-8 w-auto" />
+                  <img
+                    src="/brand/logo.svg"
+                    alt="Cotimporta"
+                    className="h-8 w-auto dark:brightness-0 dark:invert"
+                  />
                 ) : (
                   "Cotimporta"
                 )}

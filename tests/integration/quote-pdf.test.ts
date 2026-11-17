@@ -8,7 +8,7 @@ import { seed } from "@/db/seed";
 import type { RuleRef } from "@/lib/engine/types";
 import { requireEnv } from "@/lib/env";
 import type { Actor } from "@/server/authz";
-import { getOrCreateQuotePdf } from "@/server/pdf/render";
+import { getOrCreateQuotePdf, loadPdfData, renderQuotePdf } from "@/server/pdf/render";
 import {
   calculateQuote,
   confirmHeading,
@@ -125,13 +125,22 @@ describe("PDF formal de la cotización golden", () => {
     expect(en).toContain("17,332.30");
   });
 
-  it("sin public/brand/logo.png la cabecera dibuja la marca de texto Cotimporta", async () => {
-    expect(existsSync("public/brand/logo.png")).toBe(false);
+  it("con public/brand/logo.png la cabecera usa la imagen; sin logo, la marca de texto Cotimporta", async () => {
+    expect(existsSync("public/brand/logo.png")).toBe(true);
     const session = await createVerifiedSession("pdf-logo");
     const actor: Actor = { userId: session.userId, role: "user" };
     const quote = await goldenQuote(actor);
-    const text = await pdfText((await getOrCreateQuotePdf(actor, quote.id, "es")).bytes);
-    expect(text.startsWith("Cotimporta")).toBe(true);
+    const data = await loadPdfData(actor, quote.id);
+    expect(data.logo).not.toBeNull();
+
+    const withLogo = await renderQuotePdf(data, "es");
+    expect(new TextDecoder("latin1").decode(withLogo)).toContain("/Subtype /Image");
+    const withLogoText = await pdfText(withLogo);
+    expect(withLogoText.startsWith("Cotimporta")).toBe(false);
+    expect(withLogoText).toContain(quote.referenceCode);
+
+    const wordmark = await pdfText(await renderQuotePdf({ ...data, logo: null }, "es"));
+    expect(wordmark.startsWith("Cotimporta")).toBe(true);
   });
 });
 

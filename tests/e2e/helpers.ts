@@ -100,3 +100,13 @@ export async function quoteDeletedAt(referenceCode: string): Promise<Date | null
     await sql.end();
   }
 }
+
+/** Vacía el contador de registros por IP (5/h): la suite completa registra más de 5 cuentas. */
+export async function resetSignUpLimit(): Promise<void> {
+  const sql = postgres(e2eDatabaseUrl, { max: 1 });
+  try {
+    await sql`delete from rate_limit_buckets where key like 'auth:%:sign-up'`;
+  } finally {
+    await sql.end();
+  }
+}

@@ -31,7 +31,7 @@ export async function renderQuotePdf(quote: QuotePdfData, locale: Locale): Promi
 }
 
 /** Reúne lo que necesita el documento: cotización calculada del dueño, ficha, fotos y narrativa. */
-async function loadPdfData(actor: Actor, quoteId: string): Promise<QuotePdfData> {
+export async function loadPdfData(actor: Actor, quoteId: string): Promise<QuotePdfData> {
   const view = await getQuoteView(actor, quoteId);
   const { quote, result, terms } = view;
   if (quote.status !== "calculated" || !result || !quote.calculatedAt || !quote.rulesAsOf) {

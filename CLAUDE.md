@@ -53,7 +53,7 @@ server action en `src/app/(app)/app/quotes/actions.ts` → `src/server/quotes/se
 | Asunto | Fuente única |
 |---|---|
 | Esquema | `src/db/schema.ts` → `pnpm db:generate` → `pnpm db:migrate` |
-| Entorno | `src/lib/env.ts` — nunca leer `process.env` en otro archivo de `src/` (excepción: `src/db/seed.ts`) |
+| Entorno | `src/lib/env.ts` — nunca leer `process.env` en otro archivo de `src/` (excepciones: `src/db/seed.ts` y `src/db/load-official.ts`) |
 | Sesión | `src/lib/auth.ts` → `getSessionUser()` / `requireUser()` |
 | Propiedad de filas | `src/server/authz.ts` → `ownedQuoteOrThrow()`; ajeno = `NOT_FOUND` (404) |
 | Cuotas | `src/server/billing/entitlements.ts` → `getEntitlement()` |

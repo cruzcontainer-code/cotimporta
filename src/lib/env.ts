@@ -22,14 +22,22 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: optional(z.string().min(32)),
   BETTER_AUTH_URL: optional(z.url()),
   ADMIN_EMAILS: optionalText,
-  EMAIL_DRIVER: optional(z.enum(["log"])),
+  EMAIL_DRIVER: optional(z.enum(["log", "resend"])),
+  RESEND_API_KEY: optionalText,
+  RESEND_API_BASE_URL: optional(z.url()),
   EMAIL_FROM: optionalText,
   EMAIL_OUTBOX_DIR: optionalText,
   LOG_LEVEL: optional(z.enum(["debug", "info", "warn", "error"])),
   ERROR_REPORT_WEBHOOK_URL: optional(z.url()),
   CRON_SECRET: optionalText,
   TARIFF_SOURCE_URL: optional(z.url()),
-  STORAGE_DRIVER: optional(z.enum(["local"])),
+  STORAGE_DRIVER: optional(z.enum(["local", "s3"])),
+  S3_BUCKET: optionalText,
+  S3_REGION: optionalText,
+  S3_ENDPOINT: optional(z.url()),
+  S3_ACCESS_KEY_ID: optionalText,
+  S3_SECRET_ACCESS_KEY: optionalText,
+  S3_FORCE_PATH_STYLE: optional(z.enum(["true", "false"])),
   STORAGE_LOCAL_DIR: optionalText,
   AI_DRIVER: optional(z.enum(["fake", "gemini"])),
   GEMINI_API_KEY: optionalText,
@@ -59,6 +67,12 @@ function productionProblems(env: Env): string[] {
   for (const [key, value] of Object.entries(env)) {
     if (typeof value === "string" && value.startsWith("dev-only-")) {
       problems.push(`${key}: valor de desarrollo no permitido en producción`);
+    }
+  }
+  // Sin driver explícito, el código usaría local/log: en producción son obligatorios.
+  for (const key of ["EMAIL_DRIVER", "STORAGE_DRIVER"] as const) {
+    if (env[key] === undefined) {
+      problems.push(`${key}: obligatorio en producción`);
     }
   }
   for (const key of DRIVER_KEYS) {

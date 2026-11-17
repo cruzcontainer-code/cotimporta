@@ -32,4 +32,15 @@ describe("parseEnv", () => {
   it("lanza un error que nombra DATABASE_URL cuando falta", () => {
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);
   });
+
+  it("en producción exige drivers explícitos y rechaza local/log", () => {
+    const base = { DATABASE_URL: "postgres://x", VERCEL_ENV: "production" };
+    expect(() => parseEnv(base)).toThrow(/STORAGE_DRIVER: obligatorio/);
+    expect(() => parseEnv({ ...base, STORAGE_DRIVER: "local", EMAIL_DRIVER: "log" })).toThrow(
+      /no está permitido/,
+    );
+    expect(parseEnv({ ...base, STORAGE_DRIVER: "s3", EMAIL_DRIVER: "resend" }).STORAGE_DRIVER).toBe(
+      "s3",
+    );
+  });
 });

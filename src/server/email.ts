@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getEnv } from "@/lib/env";
+import { getEnv, requireEnv } from "@/lib/env";
 
 export type EmailMessage = { to: string; subject: string; text: string; html: string };
 export type OutboxEntry = EmailMessage & { createdAt: string };
@@ -27,11 +27,55 @@ const logProvider: EmailProvider = {
   },
 };
 
+/**
+ * Driver "resend": POST /emails de la API HTTP de Resend (https://resend.com/docs/api-reference/emails/send-email).
+ * El remitente sale de EMAIL_FROM, con un dominio verificado en Resend.
+ */
+export function resendProvider(options: {
+  apiKey: string;
+  from: string;
+  baseUrl?: string;
+  fetchImpl?: typeof fetch;
+}): EmailProvider {
+  const base = (options.baseUrl ?? "https://api.resend.com").replace(/\/+$/, "");
+  const doFetch = options.fetchImpl ?? fetch;
+  return {
+    async send(message) {
+      const response = await doFetch(`${base}/emails`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${options.apiKey}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          from: options.from,
+          to: [message.to],
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        // El cuerpo de error de Resend no trae datos del destinatario; se recorta por si acaso.
+        const detail = (await response.text().catch(() => "")).slice(0, 300);
+        throw new Error(`Resend respondió ${response.status}: ${detail}`);
+      }
+    },
+  };
+}
+
 export function getEmailProvider(): EmailProvider {
   const driver = getEnv().EMAIL_DRIVER ?? "log";
   switch (driver) {
     case "log":
       return logProvider;
+    case "resend":
+      return resendProvider({
+        apiKey: requireEnv("RESEND_API_KEY"),
+        from: requireEnv("EMAIL_FROM"),
+        baseUrl: getEnv().RESEND_API_BASE_URL,
+      });
   }
 }
 
