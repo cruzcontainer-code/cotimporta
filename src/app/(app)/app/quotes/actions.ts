@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isLocale } from "@/i18n/messages";
 import { requireActor } from "@/lib/auth";
+import { refreshNarrative } from "@/server/ai/narrative";
+import { suggestHeadings } from "@/server/ai/suggest-heading";
 import type { Actor } from "@/server/authz";
 import { AppError, type Result, toResult } from "@/server/errors";
 import {
@@ -90,8 +92,13 @@ export async function saveFxAction(quoteId: string, input: FxInput) {
   return quoteAction(quoteId, (actor, id) => saveFx(actor, id, valid(fxSchema, input)));
 }
 
+/** Calcula y luego intenta la narrativa; si la IA falla, el resultado se devuelve igual. */
 export async function calculateQuoteAction(quoteId: string) {
-  return quoteAction(quoteId, (actor, id) => calculateQuote(actor, id));
+  return quoteAction(quoteId, async (actor, id) => {
+    const result = await calculateQuote(actor, id);
+    await refreshNarrative(actor, id);
+    return result;
+  });
 }
 
 export async function searchHeadingsAction(query: string) {
@@ -101,11 +108,18 @@ export async function searchHeadingsAction(query: string) {
   });
 }
 
-/** Sugerencia con IA: no disponible hasta E3-T3; la UI sigue por el camino manual. */
+/**
+ * Sugerencia con IA validada contra el arancel vigente. No cambia la partida: el usuario confirma
+ * una con confirmHeadingAction. Sin candidatos válidos devuelve una lista vacía.
+ */
 export async function suggestHeadingsAction(
-  _quoteId: string,
+  quoteId: string,
 ): Promise<Result<{ code: string; descriptionEs: string; descriptionEn: string }[]>> {
-  return { ok: false, error: { code: "UPSTREAM_UNAVAILABLE", message: "IA no disponible" } };
+  return toResult(async () => {
+    const id = valid(quoteIdSchema, quoteId);
+    const { candidates } = await suggestHeadings(await requireActor(), id);
+    return candidates;
+  });
 }
 
 /** Crea una cotización y abre el asistente; sin cuota vuelve al listado con el aviso. */

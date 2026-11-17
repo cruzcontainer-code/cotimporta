@@ -63,7 +63,16 @@ export function HeadingStep({ quoteId, headingCode, actions }: Props) {
           type="button"
           className="btn btn-ghost"
           disabled={pending}
-          onClick={() => run([() => actions.suggestHeadings(quoteId)])}
+          onClick={() =>
+            // La sugerencia solo llena la lista; la partida cambia al pulsar "Confirmar".
+            run([
+              async () => {
+                const result = await actions.suggestHeadings(quoteId);
+                if (result.ok) setFound(result.data);
+                return result;
+              },
+            ])
+          }
         >
           {t.suggest}
         </button>
