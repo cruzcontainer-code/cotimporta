@@ -108,6 +108,17 @@ export default async function QuotePage({ params, searchParams }: Props) {
       <div className="flex flex-col gap-1">
         <p className="text-sm text-fg-muted">{quote.referenceCode}</p>
         <h1 className="text-2xl font-bold tracking-tight">{quote.title}</h1>
+        {quote.status === "calculated" && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {/* Descarga directa (route handler), no navegación del cliente. */}
+            <a className="btn btn-ghost" href={`/api/v1/quotes/${quote.id}/pdf?locale=es`} download>
+              Descargar PDF (ES)
+            </a>
+            <a className="btn btn-ghost" href={`/api/v1/quotes/${quote.id}/pdf?locale=en`} download>
+              Download PDF (EN)
+            </a>
+          </div>
+        )}
       </div>
       <nav aria-label={t.nav} className="flex flex-wrap gap-2">
         {STEPS.map((name, index) => (
